@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Password pop-up for sudo that says WHY it is asking.
+# sudo runs this (via SUDO_ASKPASS) and reads the password from stdout.
+# The command that asked is read from the parent sudo process (/proc/$PPID/cmdline).
+# An explicit reason can be given with:  SUDO_REASON="..." sudo <command>
+
+# --- the sudo command line that triggered this ---
+cmd=()
+if [[ -r /proc/$PPID/cmdline ]]; then
+    mapfile -d '' -t cmd < /proc/$PPID/cmdline
+fi
+# drop "sudo" itself and its leading options (-A, -E, -u user, ...)
+[[ ${cmd[0]##*/} == sudo ]] && cmd=("${cmd[@]:1}")
+while [[ ${#cmd[@]} -gt 0 && ${cmd[0]} == -* ]]; do
+    case ${cmd[0]} in
+        -u|-g|-p|-C|-D|-h|-r|-t|-T|-U) cmd=("${cmd[@]:2}") ;;
+        --) cmd=("${cmd[@]:1}"); break ;;
+        *) cmd=("${cmd[@]:1}") ;;
+    esac
+done
+full="${cmd[*]}"
+[[ -z $full ]] && full="(unknown command)"
+(( ${#full} > 600 )) && full="${full:0:600} …"
+
+# --- plain-English guess for common commands ---
+prog=${cmd[0]##*/}
+args=" ${cmd[*]:1} "
+guess=""
+case $prog in
+    pacman|pamac|yay)
+        case $args in
+            *" -R"*) guess="Remove software packages: ${cmd[*]:2}" ;;
+            *" -Syu"*|*" -Su"*) guess="Update the whole system" ;;
+            *" -S "*|*" -U "*) guess="Install software packages: ${cmd[*]:2}" ;;
+            *) guess="Change installed software (pacman)" ;;
+        esac ;;
+    update-grub|grub-mkconfig) guess="Rebuild the GRUB boot menu" ;;
+    grub-install) guess="Reinstall the GRUB boot loader" ;;
+    mkinitcpio) guess="Rebuild the kernel start-up image (initramfs)" ;;
+    systemctl) guess="Manage a system service: ${cmd[*]:1}" ;;
+    gio) [[ $args == *" trash "* ]] && guess="Move to the bin (root-owned): ${cmd[*]:2}" ;;
+    rm) guess="DELETE files permanently: ${cmd[*]:1}" ;;
+    cp|mv|install|rsync) guess="Copy/move system files" ;;
+    mount|umount) guess="Mount or unmount a drive" ;;
+    chown|chmod) guess="Change file ownership/permissions" ;;
+    sed|tee|nano|vim|vi) guess="Edit a system file" ;;
+    modprobe|rmmod|insmod) guess="Load/unload a kernel driver" ;;
+    sh|bash|zsh) guess="Run a shell script as root (see command below)" ;;
+    true) guess="Just checking whether sudo works (runs nothing)" ;;
+    ./install.sh|install.sh|*/install.sh) guess="Run an install script: $PWD/${cmd[0]}" ;;
+esac
+
+# --- short pop-up text ---
+if [[ -n $CLAUDECODE ]]; then title="Claude needs your password"; else title="sudo needs your password"; fi
+(( ${#full} > 200 )) && full="${full:0:200} …"
+esc() { printf '%s' "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
+text="<p>"
+[[ -n $SUDO_REASON ]] && text+="<b>Why:</b> $(esc "$SUDO_REASON")</p><p>"
+[[ -n $guess ]] && text+="<b>Does:</b> $(esc "$guess")</p><p>"
+text+="<b>Runs:</b> <tt>$(esc "$full")</tt></p><p><i>Not expecting this? Cancel.</i></p>"
+
+if command -v kdialog >/dev/null; then
+    exec kdialog --title "$title" --password "$text"
+elif command -v zenity >/dev/null; then
+    exec zenity --password --title "$title" --text "$text" 2>/dev/null
+else
+    exec /usr/bin/ksshaskpass "$text"
+fi
