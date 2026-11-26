@@ -54,10 +54,10 @@ Add something like this to your agent's instructions (for example `CLAUDE.md`):
 > Always run sudo as `SUDO_REASON="<plain-English reason>" sudo <command>`.
 
 ### Claude Code skill
-`skills/sudo-reason/SKILL.md` teaches Claude Code to always add a reason, give each sudo in a chain its own
+`SKILL.md` teaches Claude Code to always add a reason, give each sudo in a chain its own
 reason, use `--noconfirm` where it can't answer prompts, and check results. `install.sh` copies it to
 `~/.claude/skills/` if you use Claude Code. To install it by hand:
-`cp -r skills/sudo-reason ~/.claude/skills/`
+`mkdir -p ~/.claude/skills/sudo-reason && cp SKILL.md ~/.claude/skills/sudo-reason/`
 
 ## Requirements
 Linux with sudo, bash, and one of `kdialog` (KDE), `zenity` (GNOME etc.) or `ksshaskpass`.

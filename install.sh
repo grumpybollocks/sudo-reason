@@ -47,8 +47,8 @@ echo "Wrote ~/.config/environment.d/50-sudo-askpass.conf"
 
 # 4. Claude Code skill (only if Claude Code is used and the skill isn't there yet)
 if [ -d "$HOME/.claude" ] && [ ! -e "$HOME/.claude/skills/sudo-reason" ]; then
-    mkdir -p "$HOME/.claude/skills"
-    cp -r "$here/skills/sudo-reason" "$HOME/.claude/skills/"
+    mkdir -p "$HOME/.claude/skills/sudo-reason"
+    cp "$here/SKILL.md" "$HOME/.claude/skills/sudo-reason/SKILL.md"
     echo "Installed Claude Code skill: ~/.claude/skills/sudo-reason"
 fi
 
