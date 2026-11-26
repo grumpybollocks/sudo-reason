@@ -45,7 +45,14 @@ mkdir -p "$HOME/.config/environment.d"
 printf 'SUDO_ASKPASS=${HOME}/.local/bin/sudo-askpass-reason\n' > "$HOME/.config/environment.d/50-sudo-askpass.conf"
 echo "Wrote ~/.config/environment.d/50-sudo-askpass.conf"
 
-# 4. checks
+# 4. Claude Code skill (only if Claude Code is used and the skill isn't there yet)
+if [ -d "$HOME/.claude" ] && [ ! -e "$HOME/.claude/skills/sudo-reason" ]; then
+    mkdir -p "$HOME/.claude/skills"
+    cp -r "$here/skills/sudo-reason" "$HOME/.claude/skills/"
+    echo "Installed Claude Code skill: ~/.claude/skills/sudo-reason"
+fi
+
+# 5. checks
 bash -n "$bin" && echo "Script syntax: OK"
 command -v kdialog >/dev/null && echo "kdialog: found" || echo "WARNING: kdialog not found (will try zenity/ksshaskpass)"
 zsh -c 'source ~/.zshenv; [ "$SUDO_ASKPASS" = "$HOME/.local/bin/sudo-askpass-reason" ] && echo "zsh setup: OK"' 2>/dev/null || true
